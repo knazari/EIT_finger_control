@@ -211,6 +211,13 @@ class MG400Controller:
             "r": self._clamp(r, self.limits["r"]),
         }
 
+    @staticmethod
+    def _to_scalar(value):
+        arr = np.asarray(value)
+        if arr.size == 0:
+            raise ValueError("Cannot convert empty array to scalar")
+        return arr.reshape(-1)[0].item()
+    
     # ------------------------------------------------------------------
     # Feedback helpers
     # ------------------------------------------------------------------
@@ -259,21 +266,37 @@ class MG400Controller:
                 feed_info = np.frombuffer(data, dtype=MyType)
 
                 # Official demo validates packets with this magic test_value
-                if hex(feed_info["test_value"][0]) != "0x123456789abcdef":
+                # if hex(feed_info["test_value"][0]) != "0x123456789abcdef":
+                #     continue
+                # print("tool_vector_actual raw:", feed_info["tool_vector_actual"][0])
+                # print("tool_vector_actual shape:", np.asarray(feed_info["tool_vector_actual"][0]).shape)
+                # print("dtype:", np.asarray(feed_info["tool_vector_actual"][0]).dtype)
+                # tool_vec = np.asarray(feed_info["tool_vector_actual"][0]).reshape(-1)
+                
+                # if tool_vec.size < 4:
+
+                #     raise RuntimeError(f"Unexpected tool_vector_actual shape: {tool_vec.shape}")
+                
+                test_value = self._to_scalar(feed_info["test_value"])
+                if hex(int(test_value)) != "0x123456789abcdef":
                     continue
-
-                tool_vec = feed_info["tool_vector_actual"][0]
-
+ 
+                tool_vec = np.asarray(feed_info["tool_vector_actual"]).reshape(-1).astype(np.float64)
+                if tool_vec.size < 4:
+                    raise RuntimeError(
+                        f"Unexpected tool_vector_actual size: {tool_vec.size}, "
+                        f"value={tool_vec}"
+                    )
+ 
                 with self.pose_lock:
                     self.pose["x"] = float(tool_vec[0])
                     self.pose["y"] = float(tool_vec[1])
                     self.pose["z"] = float(tool_vec[2])
                     self.pose["r"] = float(tool_vec[3])
-
-                self.algorithm_queue_status = feed_info["isRunQueuedCmd"][0]
-                self.robot_enable_status = int(feed_info["EnableStatus"][0])
-                self.robot_error_state = bool(feed_info["ErrorStatus"][0])
-
+ 
+                self.algorithm_queue_status = int(self._to_scalar(feed_info["isRunQueuedCmd"]))
+                self.robot_enable_status = int(self._to_scalar(feed_info["EnableStatus"]))
+                self.robot_error_state = bool(self._to_scalar(feed_info["ErrorStatus"]))
                 self.feedback_ok = True
                 self.last_feedback_time = time.time()
 

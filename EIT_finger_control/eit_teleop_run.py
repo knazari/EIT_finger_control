@@ -189,7 +189,7 @@ def main():
         deadband=0.10,
         filter_alpha=0.45,
         invert_x=False,
-        invert_y=False,
+        invert_y=True,
         invert_rz=False,
         normalize_translation=True,
         dominant_axis_ratio=1.15,
@@ -198,7 +198,7 @@ def main():
         max_speed_factor=35,
         rotation_min_speed_factor=10,
         rotation_max_speed_factor=30,
-        sensor_angle_offset_deg=0.0,
+        sensor_angle_offset_deg=-90.0, # adjust for wligning rotation ...
         rotation_hold_frames=4,
     )
 
@@ -206,7 +206,7 @@ def main():
     # EIT input
     # -------------------------------
     eit = EITTactileInput(
-        serial_port="/dev/ttyACM0",
+        serial_port="COM5",
         baud_rate=115200,
         num_electrodes=16,
         mesh_element_size=0.1,
